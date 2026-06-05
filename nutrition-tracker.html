@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Nutrition Tracker</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      --color-bg: #ffffff;
+      --color-surface: #ffffff;
+      --color-surface-2: #f5f5f3;
+      --color-border: rgba(0,0,0,0.12);
+      --color-border-hover: rgba(0,0,0,0.25);
+      --color-text: #1a1a1a;
+      --color-text-muted: #6b6b67;
+      --color-text-hint: #9b9b97;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --green: #3B6D11;
+      --green-light: #EAF3DE;
+      --amber: #BA7517;
+      --amber-light: #FAEEDA;
+      --red: #A32D2D;
+      --red-light: #FCEBEB;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-bg: #1a1a1a;
+        --color-surface: #242424;
+        --color-surface-2: #2e2e2e;
+        --color-border: rgba(255,255,255,0.1);
+        --color-border-hover: rgba(255,255,255,0.25);
+        --color-text: #f0f0ee;
+        --color-text-muted: #9b9b97;
+        --color-text-hint: #6b6b67;
+        --green-light: #1a2e0a;
+        --green: #97C459;
+        --amber-light: #2e2000;
+        --amber: #EF9F27;
+        --red-light: #2e0a0a;
+        --red: #F09595;
+      }
+    }
+
+    html, body {
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      padding: 1.5rem 1rem;
+    }
+
+    #app {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .page-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1.25rem;
+    }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1.25rem;
+    }
+
+    .ring-card {
+      background: var(--color-surface);
+      border: 0.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .ring-wrap { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+    .ring-wrap svg { width: 64px; height: 64px; transform: rotate(-90deg); }
+    .ring-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .ring-pct { font-size: 12px; font-weight: 500; color: var(--color-text); font-family: var(--font-mono); }
+    .ring-info { flex: 1; min-width: 0; }
+    .ring-label { font-size: 10px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .ring-nums { font-size: 14px; font-weight: 500; color: var(--color-text); }
+    .ring-sub { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+    .over { color: var(--red) !important; }
+
+    .form-card {
+      background: var(--color-surface);
+      border: 0.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 84px 84px;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .form-grid input {
+      height: 36px;
+      padding: 0 10px;
+      font-size: 13px;
+      border: 0.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      font-family: var(--font-mono);
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-grid input::placeholder { color: var(--color-text-hint); }
+    .form-grid input:focus { border-color: var(--color-border-hover); }
+
+    .add-btn {
+      width: 100%;
+      height: 36px;
+      background: var(--color-surface);
+      border: 0.5px solid var(--color-border-hover);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      color: var(--color-text);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.12s;
+    }
+    .add-btn:hover { background: var(--color-surface-2); }
+    .add-btn:active { transform: scale(0.98); }
+
+    .log-card {
+      background: var(--color-surface);
+      border: 0.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 1.25rem;
+      border-bottom: 0.5px solid var(--color-border);
+    }
+    .log-title { font-size: 11px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.07em; }
+
+    .clear-btn {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      padding: 3px 8px;
+      border-radius: var(--radius-md);
+      transition: background 0.12s;
+    }
+    .clear-btn:hover { background: var(--color-surface-2); color: var(--color-text); }
+
+    .log-empty {
+      padding: 2rem 1.25rem;
+      text-align: center;
+      font-size: 13px;
+      color: var(--color-text-hint);
+    }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 1.25rem;
+      border-bottom: 0.5px solid var(--color-border);
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .entry-food { font-size: 13px; color: var(--color-text); }
+    .entry-time { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+    .entry-stats { display: flex; align-items: center; gap: 8px; }
+
+    .stat-pill {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+    .cal-pill { background: var(--amber-light); color: var(--amber); }
+    .pro-pill { background: var(--green-light); color: var(--green); }
+
+    .del-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      font-size: 15px;
+      line-height: 1;
+      transition: background 0.12s, color 0.12s;
+    }
+    .del-btn:hover { color: var(--red); background: var(--red-light); }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-surface);
+      border: 0.5px solid var(--color-border-hover);
+      border-radius: var(--radius-md);
+      padding: 8px 18px;
+      font-size: 13px;
+      color: var(--color-text);
+      font-family: var(--font-mono);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      z-index: 99;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 480px) {
+      .top-row { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr 72px 72px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="page-title" id="page-date">daily nutrition</div>
+
+    <div class="top-row">
+      <div class="ring-card">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="var(--color-border)" stroke-width="6"/>
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#BA7517" stroke-width="6"
+              stroke-linecap="round" stroke-dasharray="163.4" id="cal-arc" stroke-dashoffset="163.4"
+              style="transition: stroke-dashoffset 0.4s ease;"/>
+          </svg>
+          <div class="ring-center"><span class="ring-pct" id="cal-pct">0%</span></div>
+        </div>
+        <div class="ring-info">
+          <div class="ring-label">calories</div>
+          <div class="ring-nums" id="cal-nums">0 / 2000</div>
+          <div class="ring-sub" id="cal-remain">2000 remaining</div>
+        </div>
+      </div>
+
+      <div class="ring-card">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="var(--color-border)" stroke-width="6"/>
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#3B6D11" stroke-width="6"
+              stroke-linecap="round" stroke-dasharray="163.4" id="pro-arc" stroke-dashoffset="163.4"
+              style="transition: stroke-dashoffset 0.4s ease;"/>
+          </svg>
+          <div class="ring-center"><span class="ring-pct" id="pro-pct">0%</span></div>
+        </div>
+        <div class="ring-info">
+          <div class="ring-label">protein</div>
+          <div class="ring-nums" id="pro-nums">0g / 160g</div>
+          <div class="ring-sub" id="pro-remain">160g remaining</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-grid">
+        <input type="text" id="food-input" placeholder="food description…" autocomplete="off" />
+        <input type="number" id="cal-input" placeholder="kcal" min="0" />
+        <input type="number" id="pro-input" placeholder="protein g" min="0" />
+      </div>
+      <button class="add-btn" onclick="addEntry()">
+        <i class="ti ti-plus" aria-hidden="true"></i> log entry
+      </button>
+    </div>
+
+    <div class="log-card">
+      <div class="log-header">
+        <span class="log-title" id="log-date-label">today's log</span>
+        <button class="clear-btn" onclick="clearDay()">clear day</button>
+      </div>
+      <div id="log-body">
+        <div class="log-empty">no entries yet — log your first meal above</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const CAL_GOAL = 2000, PRO_GOAL = 160, CIRC = 163.4;
+
+    function todayKey() {
+      const d = new Date();
+      return 'log_' + d.getFullYear() + '_' + (d.getMonth()+1) + '_' + d.getDate();
+    }
+
+    function loadData() {
+      try { return JSON.parse(localStorage.getItem(todayKey()) || '[]'); } catch(e) { return []; }
+    }
+
+    function saveData(entries) {
+      localStorage.setItem(todayKey(), JSON.stringify(entries));
+    }
+
+    function formatTime(ts) {
+      return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatDate() {
+      return new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    function render() {
+      const entries = loadData();
+      const totCal = entries.reduce((s, e) => s + e.cal, 0);
+      const totPro = entries.reduce((s, e) => s + e.pro, 0);
+      const calPct = Math.min(totCal / CAL_GOAL, 1);
+      const proPct = Math.min(totPro / PRO_GOAL, 1);
+
+      document.getElementById('cal-arc').style.strokeDashoffset = (CIRC * (1 - calPct)).toFixed(1);
+      document.getElementById('pro-arc').style.strokeDashoffset = (CIRC * (1 - proPct)).toFixed(1);
+      document.getElementById('cal-pct').textContent = Math.round(calPct * 100) + '%';
+      document.getElementById('pro-pct').textContent = Math.round(proPct * 100) + '%';
+
+      const calOver = totCal > CAL_GOAL;
+      const proOver = totPro > PRO_GOAL;
+
+      document.getElementById('cal-nums').textContent = totCal + ' / ' + CAL_GOAL;
+      document.getElementById('cal-nums').className = 'ring-nums' + (calOver ? ' over' : '');
+      document.getElementById('pro-nums').textContent = totPro + 'g / ' + PRO_GOAL + 'g';
+      document.getElementById('pro-nums').className = 'ring-nums' + (proOver ? ' over' : '');
+      document.getElementById('cal-remain').textContent = calOver
+        ? (totCal - CAL_GOAL) + ' over goal' : (CAL_GOAL - totCal) + ' remaining';
+      document.getElementById('cal-remain').className = 'ring-sub' + (calOver ? ' over' : '');
+      document.getElementById('pro-remain').textContent = proOver
+        ? (totPro - PRO_GOAL) + 'g over goal' : (PRO_GOAL - totPro) + 'g remaining';
+      document.getElementById('pro-remain').className = 'ring-sub' + (proOver ? ' over' : '');
+
+      document.getElementById('page-date').textContent = formatDate();
+      document.getElementById('log-date-label').textContent = "today's log";
+
+      const body = document.getElementById('log-body');
+      if (!entries.length) {
+        body.innerHTML = '<div class="log-empty">no entries yet — log your first meal above</div>';
+        return;
+      }
+
+      body.innerHTML = [...entries].reverse().map((e, ri) => {
+        const realIdx = entries.length - 1 - ri;
+        return `<div class="log-entry">
+          <div>
+            <div class="entry-food">${escHtml(e.food)}</div>
+            <div class="entry-time">${formatTime(e.ts)}</div>
+          </div>
+          <div class="entry-stats">
+            <span class="stat-pill cal-pill">${e.cal} kcal</span>
+            <span class="stat-pill pro-pill">${e.pro}g</span>
+            <button class="del-btn" onclick="deleteEntry(${realIdx})" aria-label="delete entry">
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function addEntry() {
+      const food = document.getElementById('food-input').value.trim();
+      const cal = parseInt(document.getElementById('cal-input').value) || 0;
+      const pro = parseInt(document.getElementById('pro-input').value) || 0;
+      if (!food) { showToast('please enter a food description'); return; }
+      if (!cal && !pro) { showToast('enter at least calories or protein'); return; }
+      const entries = loadData();
+      entries.push({ food, cal, pro, ts: Date.now() });
+      saveData(entries);
+      document.getElementById('food-input').value = '';
+      document.getElementById('cal-input').value = '';
+      document.getElementById('pro-input').value = '';
+      document.getElementById('food-input').focus();
+      showToast('logged ✓');
+      render();
+    }
+
+    function deleteEntry(idx) {
+      const entries = loadData();
+      entries.splice(idx, 1);
+      saveData(entries);
+      render();
+    }
+
+    function clearDay() {
+      if (!confirm('clear all entries for today?')) return;
+      localStorage.removeItem(todayKey());
+      render();
+      showToast('day cleared');
+    }
+
+    document.getElementById('food-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('cal-input').focus();
+    });
+    document.getElementById('cal-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('pro-input').focus();
+    });
+    document.getElementById('pro-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') addEntry();
+    });
+
+    render();
+  </script>
+</body>
+</html>
