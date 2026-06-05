@@ -209,16 +209,20 @@
       const r = await fetch(`${SUPABASE_URL}/rest/v1/nutrition_logs?date_key=eq.${key}&select=entries`, {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
       });
+      if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
       return data && data[0] ? data[0].entries : null;
-    } catch(e) { return null; }
+    } catch(e) {
+      console.error('dbGet failed:', e);
+      throw e;
+    }
   }
 
   async function dbSet(key, entries) {
     if (!configured) return;
     setSyncStatus('syncing');
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/nutrition_logs`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/nutrition_logs`, {
         method: 'POST',
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -228,8 +232,12 @@
         },
         body: JSON.stringify({ date_key: key, entries })
       });
+      if (!r.ok) throw new Error(await r.text());
       setSyncStatus('synced');
-    } catch(e) { setSyncStatus('error'); }
+    } catch(e) {
+      console.error('dbSet failed:', e);
+      setSyncStatus('error');
+    }
   }
 
   async function dbGetAllKeys() {
@@ -238,21 +246,31 @@
       const r = await fetch(`${SUPABASE_URL}/rest/v1/nutrition_logs?select=date_key,entries&order=date_key.desc`, {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
       });
+      if (!r.ok) throw new Error(await r.text());
       return await r.json();
-    } catch(e) { return []; }
+    } catch(e) {
+      console.error('dbGetAllKeys failed:', e);
+      return [];
+    }
   }
 
   async function loadTodayEntries() {
     const key = todayKey();
     if (configured) {
       setSyncStatus('syncing');
-      const remote = await dbGet(key);
-      if (remote !== null) {
-        localSet(key, remote);
+      try {
+        const remote = await dbGet(key);
+        if (remote !== null) {
+          localSet(key, remote);
+          setSyncStatus('synced');
+          return remote;
+        }
         setSyncStatus('synced');
-        return remote;
+        return localGet(key);
+      } catch(e) {
+        setSyncStatus('error');
+        return localGet(key);
       }
-      setSyncStatus(configured ? 'error' : 'off');
     }
     return localGet(key);
   }
@@ -429,6 +447,7 @@
     document.getElementById('food-input').focus();
     showToast('logged ✓');
     await dbSet(key, entries);
+    await fullRefresh();
   }
 
   async function deleteEntry(idx) {
@@ -439,6 +458,7 @@
     renderRings(entries);
     renderLog(entries);
     await dbSet(key, entries);
+    await fullRefresh();
   }
 
   async function clearDay() {
@@ -449,6 +469,7 @@
     renderRings([]);
     renderLog([]);
     showToast('day cleared');
+    await fullRefresh();
   }
 
   document.getElementById('food-input').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('cal-input').focus(); });
